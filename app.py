@@ -4,11 +4,18 @@
 import sys
 import json
 from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, \
-    QWidget, QTreeWidget, QTreeWidgetItem, QInputDialog, QDialog, QHeaderView, QComboBox
-from PySide6.QtCore import QDateTime, Qt
+    QWidget, QTreeWidget, QTreeWidgetItem, QInputDialog, QDialog, QHeaderView, QComboBox, QLabel
+from PySide6.QtCore import QDateTime, Qt, QUrl
 from PySide6.QtWidgets import QDateTimeEdit
-
+from PySide6 import QtCore
+from PySide6.QtGui import QDesktopServices
 from datetime import datetime
+from environs import Env
+
+# Environs
+env = Env()
+env.read_env()
+ONE_MILLION_DOLLARS_HACK = env("ONE_MILLION_DOLLARS_HACK")
 
 
 class MainWindow(QMainWindow):
@@ -23,11 +30,19 @@ class MainWindow(QMainWindow):
         self.pushButton = QPushButton("Добавить задание")
         self.button_delete_task = QPushButton("Удалить задание")
 
+
+
         # Лейаут
         layout = QVBoxLayout()
         layout.addWidget(self.treeWidget)
         layout.addWidget(self.pushButton)
         layout.addWidget(self.button_delete_task)
+
+        # Ссылочка
+        self.link_label = QLabel(f"<a href='{ONE_MILLION_DOLLARS_HACK}'>ВЗЛОМ КАИТ20 ОНЛАЙН 2024 100%</a>")
+        self.link_label.setStyleSheet("color: rgba(128, 128, 128, 220);")
+        layout.addWidget(self.link_label)
+        layout.setAlignment(self.link_label, QtCore.Qt.AlignLeft | QtCore.Qt.AlignBottom)
 
         # Мейн виджет
         main_widget = QWidget()
@@ -39,6 +54,7 @@ class MainWindow(QMainWindow):
         self.treeWidget.itemDoubleClicked.connect(self.change_column)
         self.button_delete_task.clicked.connect(self.delete_selected_tasks)  # Подключаем обработчик удаления заданий
         self.treeWidget.header().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        self.link_label.linkActivated.connect(self.openLink)
 
         # Загрузка конфига
         self.load_tasks_cfg()
@@ -142,6 +158,9 @@ class MainWindow(QMainWindow):
             if len(task_text) > 50:
                 lines = [task_text[i:i+50] for i in range(0, len(task_text), 50)]
                 item.setText(1, "\n".join(lines))
+
+    def openLink(self, url):
+        QDesktopServices.openUrl(QUrl(url))
 
     # Переопределение метода closeEvent для сохранения заданий перед выходом
     def closeEvent(self, event):
