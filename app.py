@@ -8,7 +8,7 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayou
 from PySide6.QtCore import QDateTime, Qt, QUrl
 from PySide6.QtWidgets import QDateTimeEdit
 from PySide6 import QtCore
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtGui import QDesktopServices, QColor, QBrush
 from datetime import datetime
 from environs import Env
 
@@ -24,19 +24,20 @@ class MainWindow(QMainWindow):
 
         # Виджеты
         self.treeWidget = QTreeWidget()
-        self.treeWidget.setHeaderLabels(["Предмет", "Задание", "Дата Выполнения", "Тип Задания"])
+        self.treeWidget.setHeaderLabels(["Предмет", "Задание", "Дедлайн", "Тип Задания"])
 
         # Кнопки
         self.pushButton = QPushButton("Добавить задание")
         self.button_delete_task = QPushButton("Удалить задание")
-
-
 
         # Лейаут
         layout = QVBoxLayout()
         layout.addWidget(self.treeWidget)
         layout.addWidget(self.pushButton)
         layout.addWidget(self.button_delete_task)
+
+        # Установка размера окна по умолчанию
+        self.resize(550, 550)
 
         # Ссылочка
         self.link_label = QLabel(f"<a href='{ONE_MILLION_DOLLARS_HACK}'>ВЗЛОМ КАИТ20 ОНЛАЙН 2024 100%</a>")
@@ -81,12 +82,13 @@ class MainWindow(QMainWindow):
             date = item.text(2)
             task_type_combo_box = self.treeWidget.itemWidget(item, 3)
             task_type = task_type_combo_box.currentText()
-            tasks.append({"subject": subject, "task": task, "date": date, "task_type": task_type})
+            text_color = item.foreground(2).color().name()
+            tasks.append({"subject": subject, "task": task, "date": date, "task_type": task_type, "text_color":text_color})
 
         with open("cfg/tasks.json", "w") as f:
             json.dump(tasks, f)
 
-    # Метод для загрузки заданий из файла
+    # Метод загрузки конфига
     def load_tasks_cfg(self):
         try:
             with open("cfg/tasks.json", "r") as f:
@@ -96,9 +98,15 @@ class MainWindow(QMainWindow):
                     task_text = task["task"]
                     date = task["date"]
                     task_type = task["task_type"]
+                    text_color = task["text_color"]
 
-                    item = QTreeWidgetItem([subject, task_text, date, task_type])
+                    item = QTreeWidgetItem([subject, task_text, date, task_type, text_color])
                     self.treeWidget.addTopLevelItem(item)
+
+                    #Цвета
+                    color = QColor(text_color)
+                    brush = QBrush(color)
+                    item.setForeground(2, brush)
 
                     combo_box = QComboBox()
                     combo_box.addItems(["Контрольная работа",
@@ -150,6 +158,19 @@ class MainWindow(QMainWindow):
             if dialog.exec_():
                 new_date = date_edit.dateTime().toString("yyyy-MM-dd HH:mm:ss")
                 item.setText(column, new_date)
+
+                # Проверка времени до дедлайна
+                deadline = QDateTime.fromString(new_date, "yyyy-MM-dd HH:mm:ss")
+                current_datetime = QDateTime.currentDateTime()
+                difference_seconds = current_datetime.secsTo(deadline)
+                days_difference = difference_seconds // (24 * 3600)
+
+                # Установка цвета текста в зависимости от времени до дедлайна
+                if days_difference > 1:
+                    dark_green = QColor(0, 100, 0, 255)
+                    item.setForeground(column, dark_green)
+                else:
+                    item.setForeground(column, Qt.red)
 
     # Метод перехода на новую строку если кол/во символов > 50 (Работает в связке с change_column)
     def adjust_task_text(self, item, column):
