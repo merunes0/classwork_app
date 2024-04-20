@@ -4,7 +4,7 @@
 import sys
 import json
 from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, \
-    QWidget, QTreeWidget, QTreeWidgetItem, QInputDialog, QDialog, QHeaderView
+    QWidget, QTreeWidget, QTreeWidgetItem, QInputDialog, QDialog, QHeaderView, QComboBox
 from PySide6.QtCore import QDateTime, Qt
 from PySide6.QtWidgets import QDateTimeEdit
 
@@ -17,7 +17,7 @@ class MainWindow(QMainWindow):
 
         # Виджеты
         self.treeWidget = QTreeWidget()
-        self.treeWidget.setHeaderLabels(["Предмет", "Задание", "Дата Выполнения"])
+        self.treeWidget.setHeaderLabels(["Предмет", "Задание", "Дата Выполнения", "Тип Задания"])
 
         # Кнопки
         self.pushButton = QPushButton("Добавить задание")
@@ -49,8 +49,11 @@ class MainWindow(QMainWindow):
         if ok and subject_text:
             task_text, ok = QInputDialog.getText(self, "Добавить задание", "Введите задание:")
             if ok and task_text:
+                combo_box = QComboBox()
+                combo_box.addItems(["Контрольная работа", "С.Р"])
                 item = QTreeWidgetItem([subject_text, task_text, datetime.now().strftime("%Y-%m-%d")])
                 self.treeWidget.addTopLevelItem(item)
+                self.treeWidget.setItemWidget(item, 3, combo_box)  # Устанавливаем ComboBox в колонку 3
 
     # Метод Сохранения конфига при выходе (.json)
     def save_tasks(self):
@@ -60,7 +63,9 @@ class MainWindow(QMainWindow):
             subject = item.text(0)
             task = item.text(1)
             date = item.text(2)
-            tasks.append({"subject": subject, "task": task, "date": date})
+            task_type_combo_box = self.treeWidget.itemWidget(item, 3)
+            task_type = task_type_combo_box.currentText()
+            tasks.append({"subject": subject, "task": task, "date": date, "task_type": task_type})
 
         with open("cfg/tasks.json", "w") as f:
             json.dump(tasks, f)
@@ -74,8 +79,18 @@ class MainWindow(QMainWindow):
                     subject = task["subject"]
                     task_text = task["task"]
                     date = task["date"]
-                    item = QTreeWidgetItem([subject, task_text, date])
+                    task_type = task["task_type"]
+
+                    item = QTreeWidgetItem([subject, task_text, date, task_type])
                     self.treeWidget.addTopLevelItem(item)
+
+                    combo_box = QComboBox()
+                    combo_box.addItems(["Контрольная работа",
+                                        "Самостоятельная работа",
+                                        "Домашнее задание",])
+                    combo_box.setCurrentText(task_type)
+                    self.treeWidget.setItemWidget(item, 3, combo_box)
+
         except FileNotFoundError:
             pass
 
@@ -95,8 +110,12 @@ class MainWindow(QMainWindow):
             item.setFlags(item.flags() | Qt.ItemIsEditable)
             self.adjust_task_text(item, column)
             self.treeWidget.editItem(item, column)
+        elif column == 3:
+            item.setFlags(item.flags() | Qt.ItemIsEditable)
+            self.adjust_task_text(item, column)
+            self.treeWidget.editItem(item, column)
             # Изменение даты
-        if column == 2:  #
+        elif column == 2:  #
             current_date = QDateTime.fromString(item.text(column), "yyyy-MM-dd")
             date_edit = QDateTimeEdit(current_date, self)
             date_edit.setCalendarPopup(True)
