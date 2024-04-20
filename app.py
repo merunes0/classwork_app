@@ -1,0 +1,138 @@
+# Git) - https://github.com/merunes0
+# Imports
+
+import sys
+import json
+from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, \
+    QWidget, QTreeWidget, QTreeWidgetItem, QInputDialog, QDialog, QHeaderView
+from PySide6.QtCore import QDateTime, Qt
+from PySide6.QtWidgets import QDateTimeEdit
+
+from datetime import datetime
+
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super(MainWindow, self).__init__()
+
+        # Виджеты
+        self.treeWidget = QTreeWidget()
+        self.treeWidget.setHeaderLabels(["Предмет", "Задание", "Дата Выполнения"])
+
+        # Кнопки
+        self.pushButton = QPushButton("Добавить задание")
+        self.button_delete_task = QPushButton("Удалить задание")
+
+        # Лейаут
+        layout = QVBoxLayout()
+        layout.addWidget(self.treeWidget)
+        layout.addWidget(self.pushButton)
+        layout.addWidget(self.button_delete_task)
+
+        # Мейн виджет
+        main_widget = QWidget()
+        main_widget.setLayout(layout)
+        self.setCentralWidget(main_widget)
+
+        # Коннекты
+        self.pushButton.clicked.connect(self.add_task)
+        self.treeWidget.itemDoubleClicked.connect(self.change_column)
+        self.button_delete_task.clicked.connect(self.delete_selected_tasks)  # Подключаем обработчик удаления заданий
+        self.treeWidget.header().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+
+        # Загрузка конфига
+        self.load_tasks_cfg()
+
+    # Метод для добавления задания в список
+    def add_task(self):
+        subject_text, ok = QInputDialog.getText(self, "Добавить предмет", "Введите название предмета:")
+        if ok and subject_text:
+            task_text, ok = QInputDialog.getText(self, "Добавить задание", "Введите задание:")
+            if ok and task_text:
+                item = QTreeWidgetItem([subject_text, task_text, datetime.now().strftime("%Y-%m-%d")])
+                self.treeWidget.addTopLevelItem(item)
+
+    # Метод Сохранения конфига при выходе (.json)
+    def save_tasks(self):
+        tasks = []
+        for i in range(self.treeWidget.topLevelItemCount()):
+            item = self.treeWidget.topLevelItem(i)
+            subject = item.text(0)
+            task = item.text(1)
+            date = item.text(2)
+            tasks.append({"subject": subject, "task": task, "date": date})
+
+        with open("cfg/tasks.json", "w") as f:
+            json.dump(tasks, f)
+
+    # Метод для загрузки заданий из файла
+    def load_tasks_cfg(self):
+        try:
+            with open("cfg/tasks.json", "r") as f:
+                tasks = json.load(f)
+                for task in tasks:
+                    subject = task["subject"]
+                    task_text = task["task"]
+                    date = task["date"]
+                    item = QTreeWidgetItem([subject, task_text, date])
+                    self.treeWidget.addTopLevelItem(item)
+        except FileNotFoundError:
+            pass
+
+    # Метод для удаления выбранных заданий
+    def delete_selected_tasks(self):
+        selected_items = self.treeWidget.selectedItems()
+        for item in selected_items:
+            (item.parent() or self.treeWidget.invisibleRootItem()).removeChild(item)
+
+    # Метод возможности изменения столбцов (по дабл клику)
+    def change_column(self, item, column):
+        if column == 0:
+            item.setFlags(item.flags() | Qt.ItemIsEditable)
+            self.adjust_task_text(item, column)
+            self.treeWidget.editItem(item, column)
+        elif column == 1:
+            item.setFlags(item.flags() | Qt.ItemIsEditable)
+            self.adjust_task_text(item, column)
+            self.treeWidget.editItem(item, column)
+            # Изменение даты
+        if column == 2:  #
+            current_date = QDateTime.fromString(item.text(column), "yyyy-MM-dd")
+            date_edit = QDateTimeEdit(current_date, self)
+            date_edit.setCalendarPopup(True)
+            date_edit.setDisplayFormat("yyyy-MM-dd HH:mm:ss")
+
+            dialog = QDialog(self)
+            layout = QVBoxLayout()
+            layout.addWidget(date_edit)
+
+            button_yes = QPushButton("Подтвердить изменения")
+            button_yes.clicked.connect(dialog.accept)
+            layout.addWidget(button_yes)
+
+            dialog.setLayout(layout)
+
+            if dialog.exec_():
+                new_date = date_edit.dateTime().toString("yyyy-MM-dd HH:mm:ss")
+                item.setText(column, new_date)
+
+    # Метод перехода на новую строку если кол/во символов > 50 (Работает в связке с change_column)
+    def adjust_task_text(self, item, column):
+        if column == 1:
+            task_text = item.text(1)
+            if len(task_text) > 50:
+                lines = [task_text[i:i+50] for i in range(0, len(task_text), 50)]
+                item.setText(1, "\n".join(lines))
+
+    # Переопределение метода closeEvent для сохранения заданий перед выходом
+    def closeEvent(self, event):
+        self.save_tasks()
+        event.accept()
+
+
+# Запуск
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    main_window = MainWindow()
+    main_window.show()
+    sys.exit(app.exec())
