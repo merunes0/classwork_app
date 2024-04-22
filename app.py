@@ -40,7 +40,7 @@ class MainWindow(QMainWindow):
         self.resize(550, 550)
 
         # Ссылочка
-        self.link_label = QLabel(f"<a href='{ONE_MILLION_DOLLARS_HACK}'>ВЗЛОМ КАИТ20 ОНЛАЙН 2024 100%</a>")
+        self.link_label = QLabel(f"<a href='{ONE_MILLION_DOLLARS_HACK}'>Стань доллоровым миллионером 2024 гайд</a>")
         self.link_label.setStyleSheet("color: rgba(128, 128, 128, 220);")
         layout.addWidget(self.link_label)
         layout.setAlignment(self.link_label, QtCore.Qt.AlignLeft | QtCore.Qt.AlignBottom)
